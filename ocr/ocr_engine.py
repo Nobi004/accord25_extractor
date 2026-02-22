@@ -110,3 +110,54 @@ class TesseractEngine(BaseOCREngine):
             
             logger.info(f"OCR completed with {len(words)} words detected, average confidence: {avg_confidence:.2f}")
             return OCRResult(words=words,full_text=full_text,confidence=float(avg_confidence))
+
+
+class EasyOCREgine(BaseOCREngine):
+    def __init__(self,lang_list: list[str] = None,gpu: bool = False):
+        try: 
+            import easyocr
+            lang_list  = lang_list or ["en"]
+            self.reader = easyocr.Reader(lang_list,gpu=gpu)
+            logger.info(f"EasyOCR Engine initialized with languages: {lang_list} and GPU: {gpu}")
+
+        except ImportError:
+            raise ImportError("EasyOCR Engine requires EasyOCR to be installed. Install with: pip install easyocr")
+        
+    def run(self,image: Image.Image) -> OCRResult:
+        import numpy as np        
+        img_array = np.array(image)
+        results = self.reader.readtext(img_array,detail=1,paragraph=False)
+
+        words: list[OCRWord] = []
+        for (bbox,text,prob) in results:
+            text = text.strip()
+            if not text:
+                continue
+        
+        # EasyOCR returns bbox as [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+
+        xs = [pt[0] for pt in bbox]
+        ys = [pt[1] for pt in bbox]
+        x = int(min(xs))
+        y = int(min(ys))
+        w = int(max(xs) - x)
+        h = int(max(ys) - y)
+
+        words.append(OCRWord(
+            text = text,
+            x=x,y=y,w=w,h=h,
+            confidence=float(prob * 100),
+        ))
+        full_text = self._build_full_text(words)
+        avg_conf = float(np.mean(np.mean([w.confidence for w in words])) if words else 0.0)
+        logger.info(f"EasyOCR extracted {len(words)} words, avg confidence: {avg_conf:.1f}%")
+        return OCRResult(words=words,full_text=full_text,avg_confidence=avg_conf)
+
+    def get_ocr_engine(engine_name: str = "tesseract", **kwargs) -> BaseOCREngine:
+        engines = {
+            "tesseract": TesseractEngine,
+            "easyocr" : EasyOCREngine,
+        }
+        if engine_name not in engines:
+            raise ValueError(f"Unsupported OCR engine: {engine_name}. Supported engines: {list(engines.keys())}")
+        return engines[engine_name](**kwargs)
