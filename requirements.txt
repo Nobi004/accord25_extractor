@@ -1,2 +1,3 @@
 opencv-python-headless==4.13.0.92
 pytesseract==0.3.13
+typing==3.10.0.0
