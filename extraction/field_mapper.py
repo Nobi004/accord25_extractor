@@ -171,3 +171,43 @@ def extract_currency(text: str) -> Optional[str]:
         if match:
             return match.group(0)
     return None
+
+class FieldMapper:
+    def __init__(
+            self,
+            fuzzy_threshold: float = 0.75,
+            proximity_radius: int = 80,
+
+    ):
+        self.fuzzy_threshold = fuzzy_threshold
+        self.proximity_radius = proximity_radius
+
+    def extract_value_near_header(
+            self,
+            header_region: LayoutRegion,
+            all_words: list[OCRWord],
+            field_name: str,
+
+    ) -> Optional[FieldMatch]:
+        hx,hy,hw,hh = header_region.bbox
+        
+        # Exclude header words from search
+        header_word_ids = {id(w) for w in header_region.words}
+        search_words = [w for w in all_words if id(w) not in header_word_ids]
+
+        # Try right first (common for inline fields)
+        right_words = find_words_near_bbox(search_words,hx,hy,hw,hh, radius_px=self.proximity_radius,direction= "right")
+
+        if right_words:
+            value = " ".join(w.text for w in sorted(right_words, key=lambda w: w.x))
+            return value.strip()
+        
+        # Try below (common for block fields like certificate holder)
+        below_words = find_words_near_bbox(search_words,hx,hy,hw,hh,radius_px=self.proximity_radius*2,direction="below")
+
+        if below_words:
+            value = " ".join(w.text for w in sorted(below_words,key=lambda w: w.y
+            ))
+            return value.strip()
+        
+        return None
