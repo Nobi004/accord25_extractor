@@ -48,6 +48,30 @@ def find_words_near_bbox(
         direction:str = "right") -> list[OCRWord]:
     
     nearby: list[OCRWord] = []
-    ref_cx = ref_x + ref_w/2
-    ref_cy = ref_y + ref_h/2
-)
+    ref_cx = ref_x + ref_w / 2
+    ref_cy = ref_y + ref_h / 2
+
+    for word in words:
+        wc_x = word.cx
+        wc_y = word.cy
+
+        if direction == "right":
+            # Word is to the right and vertically aligned
+            if (wc_x > ref_x + ref_w and
+                    abs(wc_y - ref_cy) < ref_h * 1.5 and
+                    wc_x - (ref_x + ref_w) < radius_px * 2):
+                nearby.append(word)
+
+        elif direction == "below":
+            # Word is below and horizontally overlapping
+            if (wc_y > ref_y + ref_h and
+                    wc_y - (ref_y + ref_h) < radius_px and
+                    abs(wc_x - ref_cx) < ref_w):
+                nearby.append(word)
+
+        elif direction == "any":
+            dist = np.sqrt((wc_x - ref_cx) ** 2 + (wc_y - ref_cy) ** 2)
+            if dist < radius_px:
+                nearby.append(word)
+
+    return nearby
