@@ -81,3 +81,18 @@ CURRENCY_PATTERNS = [
 ]
 
 
+@dataclass 
+class FieldMatch:
+    field_name: str 
+    value:str
+    confidence: float 
+    match_method: str 
+    bbox: Optional[tuple] = None
+
+def normalize_text(text: str) -> str:
+    text = text.lower().strip()
+    # OCR common substitutions
+    ocr_fixes = {
+        "0": "o", "|": "i", "1": "l",
+        "@": "a", "$": "s", "8": "b",  
+    }
