@@ -96,3 +96,78 @@ def normalize_text(text: str) -> str:
         "0": "o", "|": "i", "1": "l",
         "@": "a", "$": "s", "8": "b",  
     }
+    # Only fix isolated characters (not in middle of words)
+    normalized = re.sub(r"\s+", " ", text)
+    return normalized
+def fuzzy_match_score(s1:str,s2:str) -> float:
+
+    try:
+        from rapidfuzz import fuzz
+        return fuzz.partial_ratio(s1.lower(),s2.lower()) / 100.0
+    except ImportError:
+        # simple fallback: check if shorter is substring of longer
+        s1,s2 = s1.lower(),s2.lower()
+        if s1 in s2 or s2 in s1:
+            return 0.9
+        
+        # Characer overlap ratio
+        common = sum(1 for c in s1 if c in s2)
+        return common / max(len(s1),len(s2),1)
+    
+def find_field_header(
+        regions: list[LayoutRegion],
+        field_name: str,
+        fuzzy_threshold: float = 0.75
+) -> Optional[LayoutRegion]:
+    
+    keywords = FIELD_KEYWORDS.get(field_name, [])
+    if not keywords:
+        return None
+    
+    best_region: Optional[LayoutRegion] = None
+    best_score: float = 0.0
+
+    for region in regions:
+        region_text = normalize_text(region.text)
+        for keyword in keywords:
+            kw_normalized = normalize_text(keyword)
+            
+
+            # Exact match
+            if kw_normalized in region_text:
+                if 1.0 > best_score:
+                    best_score = 1.0
+                    best_region = region
+                    break
+
+                # Fuzzy match
+                score = fuzzy_match_score(region_text,kw_normalized)
+                if score >= fuzzy_threshold and score > best_score:
+                    best_score = score
+                    best_region = region
+
+    if best_region:
+        logger.debug(f"Found header for '{field_name}' with score {best_score:.2f}: '{best_region.text}' at {best_region.bbox}")
+    
+    return best_region
+
+def extract_date(text:str) -> Optional[str]:
+    for pattern in DATE_PATTERNS:
+        match = re.search(pattern,text)
+        if match:
+            return match.group(1)
+    return None
+def extract_policy_number(text:str) -> Optional[str]:
+
+    for pattern in POLICY_NUMBER_PATTERNS:
+        match = re.search(pattern,text)
+        if match:
+            return match.group(1)
+    return None
+
+def extract_currency(text: str) -> Optional[str]:
+    for pattern in CURRENCY_PATTERNS:
+        match = re.search(pattern,text)
+        if match:
+            return match.group(0)
+    return None
