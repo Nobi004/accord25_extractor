@@ -188,7 +188,7 @@ class FieldMapper:
             all_words: list[OCRWord],
             field_name: str,
 
-    ) -> Optional[FieldMatch]:
+    ) -> Optional[str]:
         hx,hy,hw,hh = header_region.bbox
         
         # Exclude header words from search
