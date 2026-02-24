@@ -113,7 +113,7 @@ class TesseractEngine(BaseOCREngine):
             return OCRResult(words=words,full_text=full_text,confidence=float(avg_confidence))
 
 
-class EasyOCREgine(BaseOCREngine):
+class EasyOCREngine(BaseOCREngine):
     def __init__(self,lang_list: list[str] = None,gpu: bool = False):
         try: 
             import easyocr
@@ -154,11 +154,11 @@ class EasyOCREgine(BaseOCREngine):
         logger.info(f"EasyOCR extracted {len(words)} words, avg confidence: {avg_conf:.1f}%")
         return OCRResult(words=words,full_text=full_text,avg_confidence=avg_conf)
 
-    def get_ocr_engine(engine_name: str = "tesseract", **kwargs) -> BaseOCREngine:
-        engines = {
-            "tesseract": TesseractEngine,
-            "easyocr" : EasyOCREngine,
-        }
-        if engine_name not in engines:
-            raise ValueError(f"Unsupported OCR engine: {engine_name}. Supported engines: {list(engines.keys())}")
-        return engines[engine_name](**kwargs)
+def get_ocr_engine(engine_name: str = "tesseract", **kwargs) -> BaseOCREngine:
+    engines = {
+        "tesseract": TesseractEngine,
+        "easyocr": EasyOCREngine,
+    }
+    if engine_name not in engines:
+        raise ValueError(f"Unsupported OCR engine: {engine_name}. Supported engines: {list(engines.keys())}")
+    return engines[engine_name](**kwargs)
