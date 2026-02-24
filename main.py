@@ -71,9 +71,9 @@ class ACORD25Pipeline:
         image = resize_for_ocr(image)
         preprocessed = preprocess_image(
             image,
-            denoise= self.preprocessing_config.get("denoise",True)
-            deskew= self.preprocessing_config.get("deskew",True)
-            adaptive_thresh= self.preprocessing_config.get("adaptive_thresh",True)
+            denoise= self.preprocessing_config.get("denoise",True),
+            deskew= self.preprocessing_config.get("deskew",True),
+            adaptive_thresh= self.preprocessing_config.get("adaptive_thresh",True),
             contrast_enhance= self.preprocessing_config.get("contrast_enhance", True),
         )
 
