@@ -5,14 +5,14 @@ from typing import Optional
 
 from models.layout_model import (
     LayoutRegion,
-    cluster_words_into_lines,
+    # cluster_words_into_lines,
     find_words_near_bbox 
     )
-from ocr.ocr_engine import OCRResult,OCRWord
+from ocr.ocr_engine import OCRResult, OCRWord
 
 logger = logging.getLogger(__name__)
 
-# ─── Field Keyword Definitions ────────────────────────────────────────────────
+# ─── Field Keyword Definitions ────────────────────────────────────
 # Maps canonical field names to their expected label keywords on ACORD 25.
 # Multiple variants handle different ACORD 25 form versions and OCR errors.
 
@@ -66,7 +66,7 @@ FIELD_KEYWORDS: dict[str, list[str]] = {
 }
 
 
-# ─── Regex Patterns ────────────────────────────────────────────────────────────
+# ─── Regex Patterns ────────────────────────────────────
 
 DATE_PATTERNS = [
     r"\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\b",  # MM/DD/YYYY, MM-DD-YY
@@ -88,14 +88,17 @@ CURRENCY_PATTERNS = [
 @dataclass 
 class FieldMatch:
     field_name: str 
-    value:str
+    value: str
     confidence: float 
     match_method: str 
     bbox: Optional[tuple] = None
 
+
 def normalize_text(text: str) -> str:
+
     text = text.lower().strip()
     # OCR common substitutions
+
     ocr_fixes = {
         "0": "o", "|": "i", "1": "l",
         "@": "a", "$": "s", "8": "b",  
@@ -103,21 +106,24 @@ def normalize_text(text: str) -> str:
     # Only fix isolated characters (not in middle of words)
     normalized = re.sub(r"\s+", " ", text)
     return normalized
-def fuzzy_match_score(s1:str,s2:str) -> float:
+
+
+def fuzzy_match_score(s1: str, s2: str) -> float:
 
     try:
         from rapidfuzz import fuzz
         return fuzz.partial_ratio(s1.lower(),s2.lower()) / 100.0
     except ImportError:
         # simple fallback: check if shorter is substring of longer
-        s1,s2 = s1.lower(),s2.lower()
+        s1, s2 = s1.lower(), s2.lower()
         if s1 in s2 or s2 in s1:
             return 0.9
         
         # Characer overlap ratio
         common = sum(1 for c in s1 if c in s2)
-        return common / max(len(s1),len(s2),1)
-    
+        return common / max(len(s1), len(s2),1)
+
+
 def find_field_header(
         regions: list[LayoutRegion],
         field_name: str,
@@ -145,7 +151,7 @@ def find_field_header(
                     break
 
                 # Fuzzy match
-                score = fuzzy_match_score(region_text,kw_normalized)
+                score = fuzzy_match_score(region_text, kw_normalized)
                 if score >= fuzzy_threshold and score > best_score:
                     best_score = score
                     best_region = region
@@ -155,26 +161,31 @@ def find_field_header(
     
     return best_region
 
-def extract_date(text:str) -> Optional[str]:
+
+def extract_date(text: str) -> Optional[str]:
     for pattern in DATE_PATTERNS:
-        match = re.search(pattern,text)
+        match = re.search(pattern, text)
         if match:
             return match.group(1)
     return None
-def extract_policy_number(text:str) -> Optional[str]:
+
+
+def extract_policy_number(text: str) -> Optional[str]:
 
     for pattern in POLICY_NUMBER_PATTERNS:
-        match = re.search(pattern,text)
+        match = re.search(pattern, text)
         if match:
             return match.group(1)
     return None
+
 
 def extract_currency(text: str) -> Optional[str]:
     for pattern in CURRENCY_PATTERNS:
-        match = re.search(pattern,text)
+        match = re.search(pattern, text)
         if match:
             return match.group(0)
     return None
+
 
 class FieldMapper:
     def __init__(
@@ -193,24 +204,31 @@ class FieldMapper:
             field_name: str,
 
     ) -> Optional[str]:
-        hx,hy,hw,hh = header_region.bbox
+        hx, hy, hw, hh = header_region.bbox
         
         # Exclude header words from search
         header_word_ids = {id(w) for w in header_region.words}
         search_words = [w for w in all_words if id(w) not in header_word_ids]
 
         # Try right first (common for inline fields)
-        right_words = find_words_near_bbox(search_words,hx,hy,hw,hh, radius_px=self.proximity_radius,direction= "right")
+        right_words = find_words_near_bbox(
+            search_words, hx, hy, hw, hh,
+            radius_px=self.proximity_radius,
+            direction="right")
 
         if right_words:
             value = " ".join(w.text for w in sorted(right_words, key=lambda w: w.x))
             return value.strip()
         
         # Try below (common for block fields like certificate holder)
-        below_words = find_words_near_bbox(search_words,hx,hy,hw,hh,radius_px=self.proximity_radius*2,direction="below")
+        below_words = find_words_near_bbox(
+            search_words, hx, hy, hw, hh, 
+            radius_px=self.proximity_radius*2, 
+            direction="below")
 
         if below_words:
-            value = " ".join(w.text for w in sorted(below_words,key=lambda w: w.y
+            value = " ".join(w.text for w in sorted(below_words, 
+                                                    key=lambda w: w.y
             ))
             return value.strip()
         
@@ -220,18 +238,21 @@ class FieldMapper:
         self,
         regions: list[LayoutRegion],
         ocr_result: OCRResult,
-    ) -> dict[str,FieldMatch]:
-        results: dict[str,FieldMatch] = {}
+    ) -> dict[str, FieldMatch]:
+        results: dict[str, FieldMatch] = {}
         all_words = ocr_result.words
         full_text = ocr_result.full_text
         
         for field_name in FIELD_KEYWORDS.keys():
             # Step 1: Find header region
-            header = find_field_header(regions,field_name,self.fuzzy_threshold)
+            header = find_field_header(regions, 
+                                       field_name, self.fuzzy_threshold)
             
             if header:
                 # Step 2: Extract value near header
-                value = self.extract_value_near_header(header,all_words,field_name)
+                value = self.extract_value_near_header(header,
+                                                       all_words,
+                                                       field_name)
                 if value:
                     # Step 3: Apply field specific post-processing
                     results[field_name] = FieldMatch(
@@ -244,12 +265,13 @@ class FieldMapper:
                     continue
                 
             # Step 4: Fallback - regex search on full text 
-            fallback = self._regex_fallback(full_text,field_name)
+            fallback = self._regex_fallback(full_text,
+                                            field_name)
             if fallback:
                 results[field_name] = FieldMatch(
                     field_name=field_name,
                     value=fallback,
-                    confidence=0.5,  # Placeholder, can be improved with better scoring
+                    confidence=0.5,  # can be improved with better scoring
                     match_method="regex"
                 )
         logger.info(f"Extracted {len(results)}/{len(FIELD_KEYWORDS)} fields.")
