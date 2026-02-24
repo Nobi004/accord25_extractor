@@ -45,4 +45,93 @@ def pdf_to_images(pdf_path: str) -> list[str]:
     try:
         from pdf2image import convert_from_path
         images= convert_from_path(pdf_path,dpi=300)
+        logging.getLoader(__name__).info(f"Converted PDF to {len(images)} images.")
+        return images
+    except ImportError:
+        raise ImportError("pdf2image library is required for PDF processing. Please install it via 'pip install pdf2image'.")
+    
+
+def draw_extraction_overlay(image,field_matches: dict,
+                            color: tuple=(0,255,0),
+                            thickness: int=2):
+    import cv2
+    import numpy as np
+    from PIL import Image
+    
+    cv_img = cv2.cvtColor(np.array(image),cv2.COLOR_RGB2BGR)
+    
+    for field_name,match in field_matches.items():
+        if match.bbox is None:
+            continue
+        x,y,w,h = match.bbox
+        cv2.rectangle(cv_img,(x,y),(x+w,y+h),color,thickness)
+        # Add field label above box
+        cv2.putText(
+            cv_img, field_name.replace("_", " ").title(),
+            (x, max(0, y - 5)),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1
+        )
+
+    return Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
+
+
+def levenshtein_similarity(s1:str,s2: str) -> float:
+    
+    if not s1 and not s2:
+        return 1.0
+    if not s1 or not s2:
+        return 0.0
+
+    s1, s2 = s1.lower().strip(), s2.lower().strip()
+    if s1 == s2:
+        return 1.0
+
+    len_s1, len_s2 = len(s1), len(s2)
+    dp = list(range(len_s2 + 1))
+
+    for i in range(1, len_s1 + 1):
+        prev_dp = dp[:]
+        dp[0] = i
+        for j in range(1, len_s2 + 1):
+            if s1[i-1] == s2[j-1]:
+                dp[j] = prev_dp[j-1]
+            else:
+                dp[j] = 1 + min(prev_dp[j], dp[j-1], prev_dp[j-1])
+
+    edit_distance = dp[len_s2]
+    return 1.0 - edit_distance / max(len_s1, len_s2)
+
+def evaluate_extraction(
+    predicted: dict[str,Any],
+    ground_truth: dict[str,Any],
+    
+) -> dict[str,Any]:
+    exact_matches = 0
+    partial_matches = 0
+    field_scores = {}
+    
+    all_fields = set(list(predicted.keys()) + list(ground_truth.keys()))
+    
+    for field in all_fields:
+        pred_val = str(predicted.get(field,"")).strip().lower()
         
+        true_val = str(ground_truth.get(field,"")).strip().lower()
+        
+        if pred_val == true_val: 
+            exact_matches += 1
+            partial_matches += 1
+            field_scores[field] = {"exact": True, "similarity": 1.0}
+        else:
+            sim = levenshtein_similarity(pred_val,true_val)
+            is_partial = sim > 0.8
+            if is_partial:
+                partial_matches += 1 
+            field_scores[field] = {"exact": False, "similarity": round(sim,)}
+    
+    n = len(all_fields)
+    return {
+        "exact_match_accuracy": exact_matches / n if n > 0 else 0.0,
+        "partial_match_accuracy": partial_matches / n if n > 0 else 0.0,
+        "field_scores": field_scores,
+        "fields_evaluated": n,
+    }
