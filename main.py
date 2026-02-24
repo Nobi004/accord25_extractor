@@ -144,7 +144,7 @@ class ACORD25Pipeline:
             result["page"] = i + 1
             results.append(result)
         return results 
-def run_cli(image_path: str,output_dir:str =None) -> None:
+def run_cli(image_path: str,output_dir:str) -> None:
     setup_logging()
     logger.info(f"Processing file: {image_path}")
 
