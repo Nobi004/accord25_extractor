@@ -3,6 +3,7 @@ pytesseract==0.3.13
 transformers==5.2.0
 
 typing==3.10.0.0
+dataclasses==0.8
 easyocr==1.7.2
 
 rapidfuzz==3.14.3
