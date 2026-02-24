@@ -109,3 +109,81 @@ class ACORD25Pipeline:
         logger.info("Step 5: Post-processing and structuring output...")
         overall_confidence= compute_overall_confidence(field_matches)
         structured = build_structured_output(field_matches,overall_confidence)
+        
+        # ── Step 6: Validation ─────────────────────────────────────────────────
+        logger.info("Step 6: Validating extracted data...")
+        validation = validate_document(structured)
+        structured["_validation"] = {
+            "is_valid": validation.is_valid,
+            "score": round(validation.score, 3),
+            "issues": [
+                {"field": i.field, "severity": i.severity, "message": i.message}
+                for i in validation.issues
+            ],
+        }
+
+        # ________Step 7 Annotated Image__________
+        annotated  = draw_extraction_overlay(image,field_matches)
+
+        logger.info("====Pipeline Complete====")
+        return {
+            "extracted": structured,
+            "validation": validation,
+            "field_matches": field_matches,
+            "annotated_image": annotated,
+            "ocr_result": ocr_result,
+        }
+    
+    def process_pdf(self,pdf_path:str) -> list[dict[str,Any]]:
+        
+        images = pdf_to_images(pdf_path)
+        results = []
+        for i, img in enumerate(images):
+            logger.info(f"Processing PDF page {i+1}/{len(images)}")
+            result = self.process_image(img)
+            result["page"] = i + 1
+            results.append(result)
+        return results 
+def run_cli(image_path: str,output_dir:str =None) -> None:
+    setup_logging()
+    logger.info(f"Processing file: {image_path}")
+
+    pipeline = ACORD25Pipeline()
+    path = Path(image_path)
+    if path.suffix.lower() == ".pdf":
+        results = pipeline.process_pdf(str(path))
+        # For CLI, use first page result
+        result = results[0] if results else {}
+    else:
+        image = Image.open(path).convert("RGB")
+        result = pipeline.process_image(image)
+
+    extracted = result.get("extracted", {})
+    print("\n" + "="*60)
+    print("EXTRACTED DATA:")
+    print("="*60)
+    print(json.dumps(extracted, indent=2))
+
+    if output_dir:
+        out_path = Path(output_dir) / f"{path.stem}_extracted.json"
+    else:
+        out_path = OUTPUTS_DIR / f"{path.stem}_extracted.json"
+
+    save_json_output(extracted, out_path)
+    print(f"\nSaved to: {out_path}")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ACORD 25 Document Extractor")
+    parser.add_argument("image", help="Path to image or PDF file")
+    parser.add_argument("--output-dir", help="Output directory for JSON results")
+    args = parser.parse_args()
+
+    run_cli(args.image, args.output_dir)
+
+
+
+
+
