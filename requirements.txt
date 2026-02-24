@@ -8,3 +8,5 @@ easyocr==1.7.2
 
 rapidfuzz==3.14.3
 pdf2image==1.17.0
+
+streamlit==1.54.0
