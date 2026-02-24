@@ -22,25 +22,27 @@ class LayoutRegion:
 def cluster_words_into_lines(
     words: list[OCRWord],
     line_tolerance_px: int = 12
-    ) -> list[list(OCRWord)]:
+) -> list[list[OCRWord]]:
     if not words:
         return []
-    sorted_words = sorted(words,key=lambda w: w.y)
-    lines: list[list(OCRWord)] = []
+
+    sorted_words = sorted(words, key=lambda w: w.y)
+    lines: list[list[OCRWord]] = []
     current_line: list[OCRWord] = [sorted_words[0]]
 
     for word in sorted_words[1:]:
         last_word = current_line[-1]
-
+        # Check if word is on the same line (within tolerance)
         if abs(word.y - last_word.y) <= line_tolerance_px:
             current_line.append(word)
-        else: 
-            lines.append(sorted(current_line,key=lambda w: w.x))
+        else:
+            lines.append(sorted(current_line, key=lambda w: w.x))
             current_line = [word]
 
     if current_line:
-        lines.append(sorted(current_line,key=lambda w: w.x))
-        return lines
+        lines.append(sorted(current_line, key=lambda w: w.x))
+
+    return lines
 
 def find_words_near_bbox(
         words: list[OCRWord],
