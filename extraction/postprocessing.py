@@ -1,11 +1,13 @@
 import logging
-import re 
+import re
 from datetime import datetime
 from typing import Any, Optional
 
 from extraction.field_mapper import FieldMatch
 
 logger = logging.getLogger(__name__)
+
+
 
 def normalize_date(date_str: str) -> str:
     date_str = date_str.strip()
