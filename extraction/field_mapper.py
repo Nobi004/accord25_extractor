@@ -74,44 +74,34 @@ CURRENCY_PATTERNS = [
     r"\d{1,3}(?:,\d{3})+(?:\.\d{2})?",
 ]
 
-
-@dataclass 
-class FieldMatch:
-    field_name: str 
-    value: str
-    confidence: float 
-    match_method: str 
-    bbox: Optional[tuple] = None
-
-
 def normalize_text(text: str) -> str:
-
+    """Normalize text for matching, handling OCR substitutions."""
     text = text.lower().strip()
-    # OCR common substitutions
-
-    ocr_fixes = {
-        "0": "o", "|": "i", "1": "l",
-        "@": "a", "$": "s", "8": "b",  
-    }
-    # Only fix isolated characters (not in middle of words)
     normalized = re.sub(r"\s+", " ", text)
     return normalized
 
 
-def fuzzy_match_score(s1: str, s2: str) -> float:
+@dataclass
+class FieldMatch:
+    """Result of a field extraction attempt."""
+    field_name: str
+    value: str
+    confidence: float
+    match_method: str
+    bbox: Optional[tuple] = None
 
+
+def fuzzy_match_score(s1: str, s2: str) -> float:
+    """Compute similarity between two strings using Levenshtein distance."""
     try:
         from rapidfuzz import fuzz
-        return fuzz.partial_ratio(s1.lower(),s2.lower()) / 100.0
+        return fuzz.partial_ratio(s1.lower(), s2.lower()) / 100.0
     except ImportError:
-        # simple fallback: check if shorter is substring of longer
         s1, s2 = s1.lower(), s2.lower()
         if s1 in s2 or s2 in s1:
             return 0.9
-        
-        # Characer overlap ratio
         common = sum(1 for c in s1 if c in s2)
-        return common / max(len(s1), len(s2),1)
+        return common / max(len(s1), len(s2), 1)
 
 
 def find_field_header(
