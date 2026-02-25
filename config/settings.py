@@ -23,13 +23,8 @@ LAYOUT_MODEL = {
     "fallback_to_rules": True,
 }
 
-# Field extraction settings
-# Minimum similarity score for fuzzy header matching
-FIELD_FUZZY_THRESHOLD = 0.75 
-# Pixels radius to search for value near field header
-PROXIMITY_RADIUS_PX = 80       
-
-# ACORD 25 target fields
+FIELD_FUZZY_THRESHOLD = 0.75
+PROXIMITY_RADIUS_PX = 80
 ACORD25_FIELDS = [
     "producer_name",
     "insured_name",
@@ -46,6 +41,5 @@ ACORD25_FIELDS = [
     "workers_comp_limit",
 ]
 
-# Logging
 LOG_LEVEL = "INFO"
 LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
