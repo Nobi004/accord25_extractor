@@ -42,10 +42,10 @@ class ACORD25Pipeline:
 
         # Initialiizng OCR engine
         self.ocr_engine = get_ocr_engine(ocr_engine_name)
-        self.confidence_threshold = confidence_threshold,
+        self.confidence_threshold = confidence_threshold
 
-        # Initialize layout perser (+ optional LayoutLMv3)
-        self.layout_perser,self.layout_model = get_layout_parser(
+        # Initialize layout parser (+ optional LayoutLMv3)
+        self.layout_parser,self.layout_model = get_layout_parser(
             use_model=layout_config.get("use_layout_model",False),
             model_path=layout_config.get("model_path"),
             proximity_radius=proximity_radius,
@@ -82,7 +82,7 @@ class ACORD25Pipeline:
         logger.info("Step 2: Running OCR ...")
         ocr_result = self.ocr_engine.run(preprocessed)
         logger.info(f"OCR: {len(ocr_result.words)} words, "
-                    f"avg confidence: {ocr_result.avg_confidence:.1f}%")
+                    f"avg confidence: {ocr_result.confidence:.1f}%")
         
         # Filter low confidence words
         ocr_result = ocr_result.filter_by_confidence(self.confidence_threshold)
