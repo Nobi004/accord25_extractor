@@ -1,6 +1,6 @@
 import logging
-import re 
-from dataclasses import dataclass, field 
+import re
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -9,17 +9,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValidationIssue:
-    field: str 
-    severity: str 
-    message: str 
-    
+    """Represents a single validation issue."""
+    field: str
+    severity: str  # "error" | "warning" | "info"
+    message: str
 
-@dataclass 
-class ValidationResult: 
-    is_valid: bool 
+
+@dataclass
+class ValidationResult:
+    """Complete validation result for a document."""
+    is_valid: bool
     issues: list[ValidationIssue] = field(default_factory=list)
-    score: float = 1.0
-    
+    score: float = 1.0  # 1.0 = fully valid, 0.0 = completely invalid
+
 
 def validate_date(date_str: str, field_name: str) -> list[ValidationIssue]:
     issues = []
