@@ -12,35 +12,43 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OCRWord:
-    text : str 
-    x:int  # left 
-    y:int  # top
-    w:int  # width
-    h:int  # height
+    """Represents a single OCR-detected word with position and confidence."""
+    text: str
+    x: int
+    y: int
+    w: int
+    h: int
     confidence: float
-    
+
     @property
-    def cx(self) -> int: 
-        return self.x + self.w/2
+    def cx(self) -> float:
+        """Center x coordinate."""
+        return self.x + self.w / 2
+
     @property
-    def cy(self) -> int:
-        return self.y + self.h/2
+    def cy(self) -> float:
+        """Center y coordinate."""
+        return self.y + self.h / 2
+
     @property
-    def bbox(self) -> tuple[int,int,int,int]:
-        return (self.x,self.y,self.w,self.h) #Return (x, y, w, h) bounding box.
-    
+    def bbox(self) -> tuple[int, int, int, int]:
+        """Return bounding box as (x, y, w, h)."""
+        return (self.x, self.y, self.w, self.h)
+
+
 @dataclass
 class OCRResult:
+    """Complete OCR result for a document image."""
     words: list[OCRWord] = field(default_factory=list)
     full_text: str = ""
-    confidence: float = 0.0
-    
-    def filter_by_confidence(self,threshold:float) -> "OCRResult":
+    avg_confidence: float = 0.0
+
+    def filter_by_confidence(self, threshold: float) -> "OCRResult":
+        """Return new OCRResult with only words above confidence threshold."""
         filtered = [w for w in self.words if w.confidence >= threshold]
         full_text = " ".join(w.text for w in filtered if w.text.strip())
         avg_conf = np.mean([w.confidence for w in filtered]) if filtered else 0.0
-        return OCRResult(words=filtered,full_text=full_text,confidence=float(avg_conf))
-    
+        return OCRResult(words=filtered, full_text=full_text, avg_confidence=float(avg_conf))
 class BaseOCREngine(ABC):
     
     @abstractmethod
