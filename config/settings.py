@@ -1,21 +1,13 @@
-
 from pathlib import Path
 
-# Project root
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Data paths
 DATA_DIR = BASE_DIR / "data"
 SAMPLES_DIR = DATA_DIR / "samples"
 OUTPUTS_DIR = DATA_DIR / "outputs"
 
-# OCR Settings
-# Options: "tesseract" | "easyocr"
 OCR_ENGINE = "tesseract"
-# LSTM engine,assume uniform block of text
-TESSERACT_CONFIG = r"--oem 3 --psm 6"  
-# Minimum confidence score (0-100) to keep OCR result
-OCR_CONFIDENCE_THRESHOLD = 40 
+TESSERACT_CONFIG = r"--oem 3 --psm 6"
+OCR_CONFIDENCE_THRESHOLD = 40
 
 # Preprocessing settings
 PREPROCESSING = {
