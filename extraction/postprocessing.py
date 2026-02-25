@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_date(date_str: str) -> str:
+    """
+    Normalize date string to ISO format YYYY-MM-DD.
+    Handles common ACORD 25 date formats.
+    """
     date_str = date_str.strip()
     formats = [
         "%m/%d/%Y", "%m/%d/%y",    # MM/DD/YYYY, MM/DD/YY
@@ -18,7 +22,7 @@ def normalize_date(date_str: str) -> str:
         "%m.%d.%Y",                 # MM.DD.YYYY
         "%d/%m/%Y",                 # European (DD/MM/YYYY) — less common on ACORD
     ]
-    
+
     for fmt in formats:
         try:
             dt = datetime.strptime(date_str, fmt)
@@ -28,10 +32,14 @@ def normalize_date(date_str: str) -> str:
             return dt.strftime("%Y-%m-%d")
         except ValueError:
             continue
+
+    # Return original if no format matched
     logger.debug(f"Could not normalize date: {date_str}")
     return date_str
 
+
 def normalize_currency(value: str) -> str:
+    """Normalize currency to clean format (e.g., '$1,000,000')."""
     value = value.strip()
     # Remove spaces in numbers
     value = re.sub(r"(\d)\s(\d)", r"\1\2", value)
@@ -40,12 +48,15 @@ def normalize_currency(value: str) -> str:
         value = "$" + value
     return value
 
+
 def normalize_name(name: str) -> str:
+    """Clean and title-case a name field."""
     # Remove extra whitespace
     name = re.sub(r"\s+", " ", name.strip())
     # Remove OCR artifacts at edges
     name = name.strip(".|,;:-")
     return name.title()
+
 
 def build_structured_output(
     field_matches: dict,
