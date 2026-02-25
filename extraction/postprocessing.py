@@ -59,10 +59,15 @@ def normalize_name(name: str) -> str:
 
 
 def build_structured_output(
-    field_matches: dict,
-    overall_confidence: float 
-    
+    field_matches: dict[str, FieldMatch],
+    overall_confidence: float,
 ) -> dict[str, Any]:
+    """
+    Build the final structured JSON output from field matches.
+
+    Returns:
+        Dict with fields, confidence scores, and metadata
+    """
     # Base output structure
     output = {
         "producer_name": "",
