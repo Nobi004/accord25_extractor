@@ -71,10 +71,11 @@ class ACORD25Pipeline:
         image = resize_for_ocr(image)
         preprocessed = preprocess_image(
             image,
-            denoise= self.preprocessing_config.get("denoise",True),
-            deskew= self.preprocessing_config.get("deskew",True),
+            denoise=self.preprocessing_config.get("denoise", True),
+            deskew=self.preprocessing_config.get("deskew", True),
+            normalize=self.preprocessing_config.get("normalize", True),
+            contrast_enhance=self.preprocessing_config.get("contrast_enhance", True),
             adaptive_thresh=self.preprocessing_config.get("adaptive_threshold", True),
-            contrast_enhance= self.preprocessing_config.get("contrast_enhance", True),
         )
 
         # __________ Step 2 OCR _____________
