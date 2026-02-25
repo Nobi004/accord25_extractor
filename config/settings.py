@@ -9,7 +9,6 @@ OCR_ENGINE = "tesseract"
 TESSERACT_CONFIG = r"--oem 3 --psm 6"
 OCR_CONFIDENCE_THRESHOLD = 40
 
-# Preprocessing settings
 PREPROCESSING = {
     "target_dpi": 300,
     "denoise": True,
@@ -18,12 +17,10 @@ PREPROCESSING = {
     "contrast_enhance": True,
 }
 
-# Layout model settings
 LAYOUT_MODEL = {
-    # Set True if LayoutLMv3 fine-tuned model available
-    "use_layout_model": False, 
-    "model_path": None,  # Path to fine-tuned model checkpoint
-    "fallback_to_rules": True,  # Always fall back to rule-based if model fails
+    "use_layout_model": False,
+    "model_path": None,
+    "fallback_to_rules": True,
 }
 
 # Field extraction settings
