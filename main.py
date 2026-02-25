@@ -1,27 +1,25 @@
-import json 
-import logging 
-import sys 
-from pathlib import Path   
-
-from typing import Any ,Optional
+import json
+import logging
+import sys
+from pathlib import Path
+from typing import Any, Optional
 
 from PIL import Image
-# Add project root to path 
-sys.path.insert(0,str(Path(__file__).parent))
+
+sys.path.insert(0, str(Path(__file__).parent))
 
 from config.settings import (
     OCR_ENGINE, OCR_CONFIDENCE_THRESHOLD, PREPROCESSING,
     LAYOUT_MODEL, FIELD_FUZZY_THRESHOLD, PROXIMITY_RADIUS_PX,
     OUTPUTS_DIR
 )
-
 from extraction.field_mapper import FieldMapper
-from extraction.postprocessing import build_structured_output,compute_overall_confidence
+from extraction.postprocessing import build_structured_output, compute_overall_confidence
 from extraction.validation import validate_document
 from models.layout_model import get_layout_parser
 from ocr.ocr_engine import get_ocr_engine
-from ocr.preprocessing import preprocess_image,resize_for_ocr
-from utils.helpers import setup_logging,save_json_output,pdf_to_images,draw_extraction_overlay
+from ocr.preprocessing import preprocess_image, resize_for_ocr
+from utils.helpers import setup_logging, save_json_output, pdf_to_images, draw_extraction_overlay
 
 logger = logging.getLogger(__name__)
 
