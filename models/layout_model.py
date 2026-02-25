@@ -172,15 +172,18 @@ class LayoutLMv3Extractor:
 
 def get_layout_parser(
     use_model: bool = False,
-    model_path: Optional[str] = None ,
+    model_path: Optional[str] = None,
     proximity_radius: int = 80,
 ):
+    """Factory: returns rule-based parser with optional LayoutLMv3 extractor."""
     rule_parser = LayoutParser(proximity_radius=proximity_radius)
     model_extractor = None
+
     if use_model and model_path:
         try:
-            model_extractor = LayoutLMv3Extractor(model_path=model_path)
+            model_extractor = LayoutLMv3Extractor(model_path)
         except Exception as e:
-            logger.warning(f"Failed to load LayoutLMv3 model from {model_path}: {e}. Falling back to rule-based parser.")
+            logger.warning(f"LayoutLMv3 load failed ({e}), using rule-based only.")
+
     return rule_parser, model_extractor
     
