@@ -8,9 +8,6 @@ from ocr.ocr_engine import OCRResult, OCRWord
 
 logger = logging.getLogger(__name__)
 
-# ─── Field Keyword Definitions ────────────────────────────────────
-# Maps canonical field names to their expected label keywords on ACORD 25.
-# Multiple variants handle different ACORD 25 form versions and OCR errors.
 
 FIELD_KEYWORDS: dict[str, list[str]] = {
     "producer_name": [
@@ -60,7 +57,6 @@ FIELD_KEYWORDS: dict[str, list[str]] = {
         "wos"
     ],
 }
-
 
 # ─── Regex Patterns ────────────────────────────────────
 
