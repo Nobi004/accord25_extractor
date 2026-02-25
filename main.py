@@ -137,12 +137,14 @@ class ACORD25Pipeline:
             results.append(result)
         return results
 
-def run_cli(image_path: str,output_dir:str) -> None:
+def run_cli(image_path: str, output_dir: str = None) -> None:
+
     setup_logging()
     logger.info(f"Processing file: {image_path}")
 
     pipeline = ACORD25Pipeline()
     path = Path(image_path)
+
     if path.suffix.lower() == ".pdf":
         results = pipeline.process_pdf(str(path))
         # For CLI, use first page result
@@ -175,8 +177,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_cli(args.image, args.output_dir)
-
-
-
-
-
