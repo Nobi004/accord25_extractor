@@ -21,7 +21,7 @@ class ValidationResult:
     score: float = 1.0
     
 
-def validation_date(date_str: str, field_name: str) -> list[ValidationIssue]:
+def validate_date(date_str: str, field_name: str) -> list[ValidationIssue]:
     issues = []
     if not date_str:
         return [ValidationIssue(field_name, "warning", f"{field_name} is empty.")]
