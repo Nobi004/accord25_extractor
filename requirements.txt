@@ -1,12 +1,26 @@
-opencv-python-headless==4.13.0.92
-pytesseract==0.3.13
-transformers==5.2.0
+# ─── Core ─────────────────────────────────────────────────────────────────────
+numpy>=1.24.0
+Pillow>=10.0.0
+opencv-python-headless>=4.8.0
 
-typing==3.10.0.0
-dataclasses==0.8
-easyocr==1.7.2
+# ─── OCR ──────────────────────────────────────────────────────────────────────
+pytesseract>=0.3.10       # Tesseract Python wrapper
+easyocr>=1.7.0            # EasyOCR (optional, heavier)
 
-rapidfuzz==3.14.3
-pdf2image==1.17.0
+# ─── PDF Support ──────────────────────────────────────────────────────────────
+pdf2image>=1.16.3          # PDF to image conversion (requires poppler-utils system package)
 
-streamlit==1.54.0
+# ─── NLP / Layout Models ──────────────────────────────────────────────────────
+transformers>=4.35.0       # HuggingFace Transformers (for LayoutLMv3)
+torch>=2.0.0               # PyTorch (CPU-only install shown in README)
+# Optional: torchvision>=0.15.0  (needed for some transformer image processors)
+
+# ─── String Matching ──────────────────────────────────────────────────────────
+rapidfuzz>=3.5.0           # Fast fuzzy string matching
+
+# ─── Web UI ───────────────────────────────────────────────────────────────────
+streamlit>=1.29.0
+pandas>=2.0.0
+
+# ─── Dev / Testing ────────────────────────────────────────────────────────────
+pytest>=7.4.0
