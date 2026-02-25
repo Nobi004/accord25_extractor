@@ -1,9 +1,3 @@
-"""
-ACORD 25 Extractor — Streamlit Web Interface
-----------------------------------------------
-Clean, minimal UI for document upload and field extraction display.
-"""
-
 import json
 import sys
 from io import BytesIO
@@ -12,10 +6,9 @@ from pathlib import Path
 import streamlit as st
 from PIL import Image
 
-# Ensure project root is in path
 sys.path.insert(0, str(Path(__file__).parent))
 
-# ─── Page Config ──────────────────────────────
+# ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="ACORD 25 Extractor",
     page_icon="📄",
@@ -23,7 +16,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─── Custom CSS ────────────────────────────────────
 st.markdown("""
 <style>
     .field-card {
@@ -44,8 +36,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ─── Helper Functions ───────────
-
 def confidence_color_class(conf: float) -> str:
     if conf >= 0.8:
         return "confidence-high"
@@ -62,7 +52,7 @@ def format_confidence(conf: float) -> str:
 
 @st.cache_resource(show_spinner="Loading extraction pipeline...")
 def load_pipeline():
-    """Load and cache the extraction pipeline (expensive initialization)."""
+    """Load and cache the extraction pipeline."""
     from main import ACORD25Pipeline
     return ACORD25Pipeline()
 
@@ -88,7 +78,7 @@ def process_uploaded_file(uploaded_file, pipeline) -> dict:
         return pipeline.process_image(image)
 
 
-# ─── Sidebar ────────────────────────────────────────────────────
+# ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.title("⚙️ Settings")
@@ -97,7 +87,7 @@ with st.sidebar:
         "OCR Engine",
         ["tesseract", "easyocr"],
         index=0,
-        help="Tesseract is faster on CPU. EasyOCR handles rotated/noisy text better.",
+        help="Tesseract is faster. EasyOCR handles rotated/noisy text better.",
     )
 
     confidence_threshold = st.slider(
@@ -126,8 +116,6 @@ with st.sidebar:
     st.caption(f"Inference device: {device}")
 
 
-# ─── Main UI ─────────────────────────────────────────────────────────────────
-
 st.title("📄 ACORD 25 Certificate Extractor")
 st.markdown("Upload a scanned ACORD 25 certificate (JPG, PNG, or PDF) to extract structured data.")
 
@@ -141,7 +129,7 @@ if uploaded_file is None:
     st.info("👆 Upload an ACORD 25 document to get started.")
     st.stop()
 
-# ─── Process Document ─────────────────────────────────────────
+# ─── Process Document ─────────────────────────────────────────────────────────
 
 with st.spinner("Running extraction pipeline..."):
     try:
@@ -158,11 +146,10 @@ field_matches = result.get("field_matches", {})
 ocr_result = result.get("ocr_result")
 annotated_image = result.get("annotated_image")
 
-# ─── Layout: Two Columns ────────────────────────
+# ─── Layout: Two Columns ──────────────────────────────────────────────────────
 
 col_doc, col_results = st.columns([1, 1], gap="large")
 
-# Left column: document viewer
 with col_doc:
     st.subheader("📋 Document")
 
@@ -259,7 +246,7 @@ with col_results:
                             if not k.startswith("_")}
             st.json(display_json)
 
-# ─── Download Button ──────────────────────────────────────────
+# ─── Download Button ──────────────────────────────────────────────────────────
 
 output_json = json.dumps(extracted, indent=2, ensure_ascii=False)
 st.download_button(
