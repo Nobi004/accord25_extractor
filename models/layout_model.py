@@ -83,35 +83,35 @@ def find_words_near_bbox(
 class LayoutParser:
     def __init__(self,proximity_radius: int = 80):
         self.proximity_radius = proximity_radius
+    
+    def parse(self,ocr_result: OCRResult) -> list[LayoutRegion]:
+        lines  = cluster_words_into_lines(ocr_result.words)
+        regions: list[LayoutRegion] = []
         
-        def parse(self,ocr_result: OCRResult) -> list[LayoutRegion]:
-            lines  = cluster_words_into_lines(ocr_result.words)
-            regions: list[LayoutRegion] = []
+        
+        for line in lines: 
+            if not line: 
+                continue
             
+            # Each line becomes a region
+            x = min(w.x for w in line)
+            y = min(w.y for w in line)
+            x_max = max(w.x + w.w for w in line)
+            y_max = max(w.y + w.h for w in line)
             
-            for line in lines: 
-                if not line: 
-                    continue
-                
-                # Each line becomes a region
-                x = min(w.x for w in line)
-                y = min(w.y for w in line)
-                x_max = max(w.x + w.w for w in line)
-                y_max = max(w.y + w.h for w in line)
-                
-                avg_conf = sum(w.confidence for w in line) / len(line)
-                
-                regions.append(LayoutRegion(
-                    label="Text",
-                    words=line,
-                    confidence=float(avg_conf),
-                    bbox=(x,y,x_max-x,y_max-y)
-                ))
-            logger.info(f"Parsed {len(regions)} layout regions from OCR result.")
-            return regions
+            avg_conf = sum(w.confidence for w in line) / len(line)
+            
+            regions.append(LayoutRegion(
+                label="Text",
+                words=line,
+                confidence=float(avg_conf),
+                bbox=(x,y,x_max-x,y_max-y)
+            ))
+        logger.info(f"Parsed {len(regions)} layout regions from OCR result.")
+        return regions
         
 class LayoutLMv3Extractor:
-    def __inti__(self,model_path: str):
+    def __init__(self,model_path: str):
         try:
             from transformers import LayoutLMv3Processor,LayoutLMv3ForTokenClassification
             import torch 
