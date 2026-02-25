@@ -57,7 +57,7 @@ class ACORD25Pipeline:
             proximity_radius=proximity_radius,
         )
 
-        self.preprocessing_config= preprocessing_config
+        self.preprocessing_config = preprocessing_config
 
         logger.info("Pipeline ready.")
 
@@ -73,7 +73,7 @@ class ACORD25Pipeline:
             image,
             denoise= self.preprocessing_config.get("denoise",True),
             deskew= self.preprocessing_config.get("deskew",True),
-            adaptive_thresh= self.preprocessing_config.get("adaptive_thresh",True),
+            adaptive_thresh=self.preprocessing_config.get("adaptive_threshold", True),
             contrast_enhance= self.preprocessing_config.get("contrast_enhance", True),
         )
 
