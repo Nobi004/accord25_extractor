@@ -3,7 +3,7 @@ from typing import Optional
 
 import cv2 
 import numpy as np 
-from PIL import Image 
+from PIL import Image, ImageEnhance 
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def cv2_to_pil(image: np.ndarray) -> Image.Image:
 # Normalize Image
 def normalize_image(image: np.ndarray) -> np.ndarray:
     
-    gray = cv2.cvtColor(image,cv2.COLOR_BAYER_BG2GRAY)
+    gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
     normalized = clahe.apply(gray)
     return cv2.cvtColor(normalized,cv2.COLOR_GRAY2BGR)
@@ -48,7 +48,7 @@ def deskew_image(image: np.ndarray) -> np.ndarray:
     for line in lines:
         x1,y1,x2,y2 = line[0]
         if x2 - x1 != 0:
-            angle= np.degreesnp.arctan2(y2-y1,x2-x1)
+            angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
             # only consider near-horizontal lines for deskewing
             if -15 < angle < 15:
                 angles.append(angle)
@@ -88,14 +88,15 @@ def preprocess_image(pil_image: Image.Image,
                      denoise: bool = True,
                      deskew: bool = True,
                      normalize: bool = True,
-                     contrast: bool = True,
-                     threshold: bool = True) -> Image.Image:
+                     contrast_enhance: bool = True,
+                     adaptive_thresh: bool = True) -> Image.Image:
     logger.info("Starting image preprocessing pipeline.")
     if contrast_enhance:
         pil_image = enhance_contrast(pil_image)
     
     cv_image = pil_to_cv2(pil_image)
-    cv_iamge = normalize_image(cv_image)
+    if normalize:
+        cv_image = normalize_image(cv_image)
     
     if denoise:
         cv_image = denoise_image(cv_image)
@@ -103,10 +104,10 @@ def preprocess_image(pil_image: Image.Image,
     if deskew:
         cv_image = deskew_image(cv_image)
         
-    if adaptive_threshold:
+    if adaptive_thresh:
         cv_image = adaptive_threshold(cv_image)
     
-    result= cv2_to_pil(cv_image)
+    result = cv2_to_pil(cv_image)
     logger.info("Completed image preprocessing.")
     return result
 
