@@ -168,99 +168,111 @@ def extract_currency(text: str) -> Optional[str]:
 
 
 class FieldMapper:
-    def __init__(
-            self,
-            fuzzy_threshold: float = 0.75,
-            proximity_radius: int = 80,
+    """Main field extraction engine for ACORD 25 documents."""
 
+    def __init__(
+        self,
+        fuzzy_threshold: float = 0.75,
+        proximity_radius: int = 80,
     ):
         self.fuzzy_threshold = fuzzy_threshold
         self.proximity_radius = proximity_radius
 
     def extract_value_near_header(
-            self,
-            header_region: LayoutRegion,
-            all_words: list[OCRWord],
-            field_name: str,
-
+        self,
+        header_region: LayoutRegion,
+        all_words: list[OCRWord],
+        field_name: str,
     ) -> Optional[str]:
+        """Extract value from words spatially adjacent to a header."""
         hx, hy, hw, hh = header_region.bbox
-        
-        # Exclude header words from search
         header_word_ids = {id(w) for w in header_region.words}
         search_words = [w for w in all_words if id(w) not in header_word_ids]
 
-        # Try right first (common for inline fields)
         right_words = find_words_near_bbox(
             search_words, hx, hy, hw, hh,
-            radius_px=self.proximity_radius,
-            direction="right")
+            radius_px=self.proximity_radius, direction="right"
+        )
 
         if right_words:
             value = " ".join(w.text for w in sorted(right_words, key=lambda w: w.x))
             return value.strip()
-        
-        # Try below (common for block fields like certificate holder)
+
         below_words = find_words_near_bbox(
-            search_words, hx, hy, hw, hh, 
-            radius_px=self.proximity_radius*2, 
-            direction="below")
+            search_words, hx, hy, hw, hh,
+            radius_px=self.proximity_radius * 2, direction="below"
+        )
 
         if below_words:
-            value = " ".join(w.text for w in sorted(below_words, 
-                                                    key=lambda w: w.y
-            ))
+            value = " ".join(w.text for w in sorted(below_words, key=lambda w: (w.y, w.x)))
             return value.strip()
-        
+
         return None
-    
+
     def map_fields(
         self,
         regions: list[LayoutRegion],
         ocr_result: OCRResult,
     ) -> dict[str, FieldMatch]:
+        """Map all ACORD 25 fields from layout regions and OCR result."""
         results: dict[str, FieldMatch] = {}
         all_words = ocr_result.words
         full_text = ocr_result.full_text
-        
+
         for field_name in FIELD_KEYWORDS.keys():
-            # Step 1: Find header region
-            header = find_field_header(regions, 
-                                       field_name, self.fuzzy_threshold)
-            
+            header = find_field_header(regions, field_name, self.fuzzy_threshold)
+
             if header:
-                # Step 2: Extract value near header
-                value = self.extract_value_near_header(header,
-                                                       all_words,
-                                                       field_name)
+                value = self.extract_value_near_header(header, all_words, field_name)
+
                 if value:
-                    # Step 3: Apply field specific post-processing
+                    value = self._postprocess_value(field_name, value)
                     results[field_name] = FieldMatch(
                         field_name=field_name,
                         value=value,
-                        confidence=1.0,  # Placeholder, can be improved with better scoring
-                        match_method="proximity",
-                        bbox=header.bbox
+                        confidence=0.85,
+                        match_method="spatial_proximity",
+                        bbox=header.bbox,
                     )
                     continue
-                
-            # Step 4: Fallback - regex search on full text 
+
             fallback = self._regex_fallback(field_name, full_text)
             if fallback:
                 results[field_name] = FieldMatch(
                     field_name=field_name,
                     value=fallback,
-                    confidence=0.5,  # can be improved with better scoring
-                    match_method="regex"
+                    confidence=0.60,
+                    match_method="regex_fallback",
                 )
-        logger.info(f"Extracted {len(results)}/{len(FIELD_KEYWORDS)} fields.")
+
+        logger.info(f"Extracted {len(results)}/{len(FIELD_KEYWORDS)} fields")
         return results
-    
+
+    def _postprocess_value(self, field_name: str, value: str) -> str:
+        """Apply field-specific cleaning and normalization."""
+        value = value.strip()
+        value = re.sub(r"[|\\/]{2,}", "", value)
+        value = re.sub(r"\s+", " ", value)
+
+        if "date" in field_name:
+            date = extract_date(value)
+            if date:
+                return date
+
+        if field_name == "policy_number":
+            pol = extract_policy_number(value)
+            if pol:
+                return pol
+
+        if "limit" in field_name:
+            currency = extract_currency(value)
+            if currency:
+                return currency
+
+        return value
+
     def _regex_fallback(self, field_name: str, full_text: str) -> Optional[str]:
-        """
-        Last-resort regex extraction directly on full document text.
-        Lower confidence than spatial extraction.
-        """
+        """Last-resort regex extraction directly on full document text."""
         if "date" in field_name:
             return extract_date(full_text)
 
