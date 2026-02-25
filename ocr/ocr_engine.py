@@ -201,10 +201,14 @@ class EasyOCREngine(BaseOCREngine):
 
 
 def get_ocr_engine(engine_name: str = "tesseract", **kwargs) -> BaseOCREngine:
+
     engines = {
         "tesseract": TesseractEngine,
         "easyocr": EasyOCREngine,
     }
+
     if engine_name not in engines:
-        raise ValueError(f"Unsupported OCR engine: {engine_name}. Supported engines: {list(engines.keys())}")
+        raise ValueError(f"Unknown OCR engine: {engine_name}. Choose from {list(engines.keys())}")
+
+    logger.info(f"Using OCR engine: {engine_name}")
     return engines[engine_name](**kwargs)
