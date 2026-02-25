@@ -24,27 +24,29 @@ from utils.helpers import setup_logging, save_json_output, pdf_to_images, draw_e
 logger = logging.getLogger(__name__)
 
 class ACORD25Pipeline:
+    """Orchestrates document preprocessing, OCR, layout parsing, field extraction, and validation."""
 
-    def __init__(self,
-                 ocr_engine_name:str = OCR_ENGINE,
-                 confidence_threshold: float = OCR_CONFIDENCE_THRESHOLD,
-                 fuzzy_threshold: float = FIELD_FUZZY_THRESHOLD,
-                 proximity_radius: int = PROXIMITY_RADIUS_PX,
-                 preprocessing_config: dict = None,
-                 layout_config: dict = None,
-                 ):
+    def __init__(
+        self,
+        ocr_engine_name: str = OCR_ENGINE,
+        confidence_threshold: float = OCR_CONFIDENCE_THRESHOLD,
+        fuzzy_threshold: float = FIELD_FUZZY_THRESHOLD,
+        proximity_radius: int = PROXIMITY_RADIUS_PX,
+        preprocessing_config: dict = None,
+        layout_config: dict = None,
+    ):
         preprocessing_config = preprocessing_config or PREPROCESSING
         layout_config = layout_config or LAYOUT_MODEL
 
-        logger.info("Initializing ACORD2Pipeline....")
+        logger.info("Initializing ACORD25Pipeline...")
 
-        # Initialiizng OCR engine
+        # Initialize OCR engine
         self.ocr_engine = get_ocr_engine(ocr_engine_name)
         self.confidence_threshold = confidence_threshold
 
         # Initialize layout parser (+ optional LayoutLMv3)
-        self.layout_parser,self.layout_model = get_layout_parser(
-            use_model=layout_config.get("use_layout_model",False),
+        self.layout_parser, self.layout_model = get_layout_parser(
+            use_model=layout_config.get("use_layout_model", False),
             model_path=layout_config.get("model_path"),
             proximity_radius=proximity_radius,
         )
@@ -56,61 +58,46 @@ class ACORD25Pipeline:
         )
 
         self.preprocessing_config = preprocessing_config
-
         logger.info("Pipeline ready.")
 
-    def process_image(self,image: Image.Image) -> dict[str,Any]:
-        logger.info("=== Starting ACORD 25 extraction pipeline ===")
+    def process_image(self, image: Image.Image) -> dict[str, Any]:
+        """Extract fields from an ACORD 25 document image."""
+        logger.info("Starting extraction pipeline")
 
-        # ____________ Step 1 Preprocessing _______________
-
-        logger.info("Step 1 : Preprocessing image ....")
-
+        logger.debug("Preprocessing image")
         image = resize_for_ocr(image)
         preprocessed = preprocess_image(
             image,
             denoise=self.preprocessing_config.get("denoise", True),
             deskew=self.preprocessing_config.get("deskew", True),
-            normalize=self.preprocessing_config.get("normalize", True),
-            contrast_enhance=self.preprocessing_config.get("contrast_enhance", True),
             adaptive_thresh=self.preprocessing_config.get("adaptive_threshold", True),
+            contrast_enhance=self.preprocessing_config.get("contrast_enhance", True),
         )
 
-        # __________ Step 2 OCR _____________
-        logger.info("Step 2: Running OCR ...")
+        logger.debug("Running OCR")
         ocr_result = self.ocr_engine.run(preprocessed)
-        logger.info(f"OCR: {len(ocr_result.words)} words, "
-                    f"avg confidence: {ocr_result.confidence:.1f}%")
-        
-        # Filter low confidence words
+        logger.debug(f"OCR: {len(ocr_result.words)} words (avg confidence: {ocr_result.avg_confidence:.1f}%)")
         ocr_result = ocr_result.filter_by_confidence(self.confidence_threshold)
-        logger.info(f"After confidence filter: {len(ocr_result.words)} words remaining")
+        logger.debug(f"Filtered to {len(ocr_result.words)} words")
 
-        # _________Step 3: Layout Parsing ______________
-        logger.info("Parsing document layout...")
+        logger.debug("Parsing layout")
         regions = self.layout_parser.parse(ocr_result)
 
-        # ___________Step 4 : Field Extraction ___________
-        logger.info("Step 4: Extraction Fields...")
-
-        #Try LayoutLMv3 if available
+        logger.debug("Extracting fields")
         if self.layout_model:
             try:
                 model_output = self.layout_model.extract(image, ocr_result)
-                logger.info(f"LayoutLMv3 extracted {len(model_output)} fields.")
-                # TODO: merge model output with rule-based for hybrid approach
+                logger.debug(f"LayoutLMv3 extracted {len(model_output)} fields")
             except Exception as e:
-                logger.warning(f"LayoutLMv3 extraction failed: {e}, using rules.")
+                logger.warning(f"LayoutLMv3 extraction failed: {e}, using rules")
 
-        field_matches = self.field_mapper.map_fields(regions,ocr_result)
+        field_matches = self.field_mapper.map_fields(regions, ocr_result)
 
-        # ________________ Step 5 : Post-Processing_________________________
-        logger.info("Step 5: Post-processing and structuring output...")
-        overall_confidence= compute_overall_confidence(field_matches)
-        structured = build_structured_output(field_matches,overall_confidence)
-        
-        # ── Step 6: Validation ─────────────────────────────────────────────────
-        logger.info("Step 6: Validating extracted data...")
+        logger.debug("Post-processing results")
+        overall_confidence = compute_overall_confidence(field_matches)
+        structured = build_structured_output(field_matches, overall_confidence)
+
+        logger.debug("Validating data")
         validation = validate_document(structured)
         structured["_validation"] = {
             "is_valid": validation.is_valid,
@@ -121,10 +108,8 @@ class ACORD25Pipeline:
             ],
         }
 
-        # ________Step 7 Annotated Image__________
-        annotated  = draw_extraction_overlay(image,field_matches)
-
-        logger.info("====Pipeline Complete====")
+        annotated = draw_extraction_overlay(image, field_matches)
+        logger.info("Pipeline complete")
         return {
             "extracted": structured,
             "validation": validation,
@@ -132,9 +117,17 @@ class ACORD25Pipeline:
             "annotated_image": annotated,
             "ocr_result": ocr_result,
         }
-    
-    def process_pdf(self,pdf_path:str) -> list[dict[str,Any]]:
-        
+
+    def process_pdf(self, pdf_path: str) -> list[dict[str, Any]]:
+        """
+        Process a multi-page PDF. Returns results for each page.
+
+        Args:
+            pdf_path: Path to PDF file
+
+        Returns:
+            List of per-page results
+        """
         images = pdf_to_images(pdf_path)
         results = []
         for i, img in enumerate(images):
@@ -142,7 +135,8 @@ class ACORD25Pipeline:
             result = self.process_image(img)
             result["page"] = i + 1
             results.append(result)
-        return results 
+        return results
+
 def run_cli(image_path: str,output_dir:str) -> None:
     setup_logging()
     logger.info(f"Processing file: {image_path}")
