@@ -26,6 +26,7 @@ def cluster_words_into_lines(
     words: list[OCRWord],
     line_tolerance_px: int = 12
 ) -> list[list[OCRWord]]:
+    """Group words into lines based on vertical proximity."""
     if not words:
         return []
 
@@ -35,7 +36,6 @@ def cluster_words_into_lines(
 
     for word in sorted_words[1:]:
         last_word = current_line[-1]
-        # Check if word is on the same line (within tolerance)
         if abs(word.y - last_word.y) <= line_tolerance_px:
             current_line.append(word)
         else:
@@ -47,12 +47,14 @@ def cluster_words_into_lines(
 
     return lines
 
+
 def find_words_near_bbox(
-        words: list[OCRWord],
-        ref_x: int,ref_y: int, ref_w: int, ref_h: int,
-        radius_px: int = 80,
-        direction:str = "right") -> list[OCRWord]:
-    
+    words: list[OCRWord],
+    ref_x: int, ref_y: int, ref_w: int, ref_h: int,
+    radius_px: int = 80,
+    direction: str = "right"
+) -> list[OCRWord]:
+    """Find words spatially near a reference bounding box (right, below, or any direction)."""
     nearby: list[OCRWord] = []
     ref_cx = ref_x + ref_w / 2
     ref_cy = ref_y + ref_h / 2
@@ -62,14 +64,12 @@ def find_words_near_bbox(
         wc_y = word.cy
 
         if direction == "right":
-            # Word is to the right and vertically aligned
             if (wc_x > ref_x + ref_w and
                     abs(wc_y - ref_cy) < ref_h * 1.5 and
                     wc_x - (ref_x + ref_w) < radius_px * 2):
                 nearby.append(word)
 
         elif direction == "below":
-            # Word is below and horizontally overlapping
             if (wc_y > ref_y + ref_h and
                     wc_y - (ref_y + ref_h) < radius_px and
                     abs(wc_x - ref_cx) < ref_w):
@@ -81,6 +81,7 @@ def find_words_near_bbox(
                 nearby.append(word)
 
     return nearby
+
 
 
 class LayoutParser:
