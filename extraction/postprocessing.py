@@ -159,7 +159,11 @@ def build_structured_output(
     return output
 
 
-def compute_overall_confidence(field_matches: list[FieldMatch]) -> float:
+def compute_overall_confidence(field_matches: dict[str, FieldMatch]) -> float:
+    """
+    Compute weighted overall confidence score.
+    High-priority fields (producer, insured, policy number) weighted more.
+    """
     priority_fields = {"producer_name", "insured_name", "policy_number",
                        "effective_date", "expiration_date"}
 
