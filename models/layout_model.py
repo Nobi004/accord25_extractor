@@ -1,23 +1,26 @@
-import logging 
-from dataclasses import dataclass, field 
-from typing import Optional 
+import logging
+from dataclasses import dataclass, field
+from typing import Optional
 
-import numpy as np 
+import numpy as np
 
 from ocr.ocr_engine import OCRResult, OCRWord
+
 logger = logging.getLogger(__name__)
 
-@dataclass 
+
+@dataclass
 class LayoutRegion:
-    label: str 
+    """A spatial region on the document."""
+    label: str
     words: list[OCRWord]
-    confidence: float 
-    bbox: tuple[int,int,int,int] # (x, y, w, h) of the region
+    confidence: float
+    bbox: tuple[int, int, int, int]
 
     @property
     def text(self) -> str:
-        # Joined text of all words in region, sorted top-to-bottom then left-to-right
-        return " ".join(w.text for w in sorted(self.words,key=lambda w: (w.y,w.x)))
+        """Joined text of all words in region."""
+        return " ".join(w.text for w in sorted(self.words, key=lambda w: (w.y, w.x)))
 
 def cluster_words_into_lines(
     words: list[OCRWord],
