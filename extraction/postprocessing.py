@@ -46,7 +46,7 @@ def normalize_name(name: str) -> str:
     return name.title()
 
 def build_structured_output(
-    field_matches: list[FieldMatch],
+    field_matches: dict,
     overall_confidence: float 
     
 ) -> dict[str, Any]:
