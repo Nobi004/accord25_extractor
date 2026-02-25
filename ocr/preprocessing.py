@@ -114,24 +114,31 @@ def preprocess_image(
     logger.info("Preprocessing complete.")
     return result
 
-def load_image_from_path(path:str) -> Image.Image:
-    
+def load_image_from_path(path: str) -> Image.Image:
+    """Load image from file path, converting to RGB."""
     return Image.open(path).convert("RGB")
 
-def resize_for_ocr(image: Image.Image,
-                   target_dpi: int =300,
+
+def resize_for_ocr(image: Image.Image, target_dpi: int = 300,
                    current_dpi: Optional[int] = None) -> Image.Image:
+    """
+    Resize image to target DPI for optimal OCR performance.
+    Tesseract and EasyOCR both perform best at ~300 DPI.
+    """
     if current_dpi is None:
-        dpi_info = image.info.get("dpi",(72,72))
-        current_dpi = dpi_info[0] if isinstance(dpi_info,tuple) else 72
-        
+        # Try to get DPI from image metadata
+        dpi_info = image.info.get("dpi", (72, 72))
+        current_dpi = dpi_info[0] if isinstance(dpi_info, tuple) else 72
+
     if current_dpi == target_dpi:
         return image
-    
+
     scale_factor = target_dpi / current_dpi
     new_size = (int(image.width * scale_factor), int(image.height * scale_factor))
-    
-    if scale_factor > 1:
-        logger.info(f"Upscaling image from {current_dpi} DPI to {target_dpi} DPI for better OCR accuracy.")
-        return image.resize(new_size,Image.LANCZOS)
-    return image 
+
+    # Only upscale if below target DPI
+    if scale_factor > 1.0:
+        logger.info(f"Upscaling image from {current_dpi} to {target_dpi} DPI.")
+        return image.resize(new_size, Image.LANCZOS)
+
+    return image
