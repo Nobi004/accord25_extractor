@@ -105,44 +105,43 @@ def fuzzy_match_score(s1: str, s2: str) -> float:
 
 
 def find_field_header(
-        regions: list[LayoutRegion],
-        field_name: str,
-        fuzzy_threshold: float = 0.75
+    regions: list[LayoutRegion],
+    field_name: str,
+    fuzzy_threshold: float = 0.75,
 ) -> Optional[LayoutRegion]:
-    
+    """Find layout region containing the field header label."""
     keywords = FIELD_KEYWORDS.get(field_name, [])
     if not keywords:
         return None
-    
+
     best_region: Optional[LayoutRegion] = None
     best_score: float = 0.0
 
     for region in regions:
         region_text = normalize_text(region.text)
+
         for keyword in keywords:
             kw_normalized = normalize_text(keyword)
-            
 
-            # Exact match
             if kw_normalized in region_text:
                 if 1.0 > best_score:
                     best_score = 1.0
                     best_region = region
-                    break
+                break
 
-                # Fuzzy match
-                score = fuzzy_match_score(region_text, kw_normalized)
-                if score >= fuzzy_threshold and score > best_score:
-                    best_score = score
-                    best_region = region
+            score = fuzzy_match_score(kw_normalized, region_text)
+            if score >= fuzzy_threshold and score > best_score:
+                best_score = score
+                best_region = region
 
     if best_region:
-        logger.debug(f"Found header for '{field_name}' with score {best_score:.2f}: '{best_region.text}' at {best_region.bbox}")
-    
+        logger.debug(f"Found header for '{field_name}' with score {best_score:.2f}")
+
     return best_region
 
 
 def extract_date(text: str) -> Optional[str]:
+    """Extract and normalize date from text."""
     for pattern in DATE_PATTERNS:
         match = re.search(pattern, text)
         if match:
@@ -151,7 +150,7 @@ def extract_date(text: str) -> Optional[str]:
 
 
 def extract_policy_number(text: str) -> Optional[str]:
-
+    """Extract policy number from text using regex patterns."""
     for pattern in POLICY_NUMBER_PATTERNS:
         match = re.search(pattern, text)
         if match:
@@ -160,6 +159,7 @@ def extract_policy_number(text: str) -> Optional[str]:
 
 
 def extract_currency(text: str) -> Optional[str]:
+    """Extract currency/limit value from text."""
     for pattern in CURRENCY_PATTERNS:
         match = re.search(pattern, text)
         if match:
