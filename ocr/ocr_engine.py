@@ -38,7 +38,7 @@ class OCRResult:
         filtered = [w for w in self.words if w.confidence >= threshold]
         full_text = " ".join(w.text for w in filtered if w.text.strip())
         avg_conf = np.mean([w.confidence for w in filtered]) if filtered else 0.0
-        return OCRResult(words=filtered,full_text=full_text,avg_confidence=float(avg_conf))
+        return OCRResult(words=filtered,full_text=full_text,confidence=float(avg_conf))
     
 class BaseOCREngine(ABC):
     
@@ -106,11 +106,12 @@ class TesseractEngine(BaseOCREngine):
                 w= int(data["width"][i]),
                 h= int(data["height"][i]),
                 confidence=conf))
-            full_text = self._build_full_text(words)
-            avg_confidence = np.mean([w.confidence for w in words]) if words else 0.0
-            
-            logger.info(f"OCR completed with {len(words)} words detected, average confidence: {avg_confidence:.2f}")
-            return OCRResult(words=words,full_text=full_text,confidence=float(avg_confidence))
+        
+        full_text = self._build_full_text(words)
+        avg_confidence = np.mean([w.confidence for w in words]) if words else 0.0
+        
+        logger.info(f"OCR completed with {len(words)} words detected, average confidence: {avg_confidence:.2f}")
+        return OCRResult(words=words,full_text=full_text,confidence=float(avg_confidence))
 
 
 class EasyOCREngine(BaseOCREngine):
@@ -134,25 +135,25 @@ class EasyOCREngine(BaseOCREngine):
             text = text.strip()
             if not text:
                 continue
+            
+            # EasyOCR returns bbox as [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+            xs = [pt[0] for pt in bbox]
+            ys = [pt[1] for pt in bbox]
+            x = int(min(xs))
+            y = int(min(ys))
+            w = int(max(xs) - x)
+            h = int(max(ys) - y)
+
+            words.append(OCRWord(
+                text = text,
+                x=x,y=y,w=w,h=h,
+                confidence=float(prob * 100),
+            ))
         
-        # EasyOCR returns bbox as [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
-
-        xs = [pt[0] for pt in bbox]
-        ys = [pt[1] for pt in bbox]
-        x = int(min(xs))
-        y = int(min(ys))
-        w = int(max(xs) - x)
-        h = int(max(ys) - y)
-
-        words.append(OCRWord(
-            text = text,
-            x=x,y=y,w=w,h=h,
-            confidence=float(prob * 100),
-        ))
         full_text = self._build_full_text(words)
-        avg_conf = float(np.mean(np.mean([w.confidence for w in words])) if words else 0.0)
+        avg_conf = float(np.mean([w.confidence for w in words]) if words else 0.0)
         logger.info(f"EasyOCR extracted {len(words)} words, avg confidence: {avg_conf:.1f}%")
-        return OCRResult(words=words,full_text=full_text,avg_confidence=avg_conf)
+        return OCRResult(words=words,full_text=full_text,confidence=avg_conf)
 
 def get_ocr_engine(engine_name: str = "tesseract", **kwargs) -> BaseOCREngine:
     engines = {
