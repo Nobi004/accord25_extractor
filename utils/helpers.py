@@ -1,4 +1,4 @@
-import json 
+import json
 import logging
 import logging.handlers
 import sys
@@ -8,7 +8,7 @@ from typing import Any
 from config.settings import LOG_FORMAT, LOG_LEVEL
 
 
-def setup_logging(level: str = LOG_LEVEL,log_file:str = None) -> logging.Logger:
+def setup_logging(level: str = LOG_LEVEL, log_file: str = None) -> logging.Logger:
     """Configure application logging."""
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, level.upper(), logging.INFO))
