@@ -1,34 +1,35 @@
-import logging  
+import logging
 from typing import Optional
 
-import cv2 
-import numpy as np 
-from PIL import Image, ImageEnhance 
+import cv2
+import numpy as np
+from PIL import Image, ImageEnhance
 
 logger = logging.getLogger(__name__)
 
 
-# Convert PIL Image to OpenCV BGR array.
 def pil_to_cv2(image: Image.Image) -> np.ndarray:
-    return cv2.cvtColor(np.array(image.convert("RGB")),cv2.COLOR_RGB2BGR)
+    """Convert PIL Image to OpenCV BGR array."""
+    return cv2.cvtColor(np.array(image.convert("RGB")), cv2.COLOR_RGB2BGR)
 
-# Convert OpenCV BGR array to PIL Image.
+
 def cv2_to_pil(image: np.ndarray) -> Image.Image:
-    return Image.fromarray(cv2.cvtColor(image,cv2.COLOR_BGR2RGB))
+    """Convert OpenCV BGR array to PIL Image."""
+    return Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
 
-# Normalize Image
+
 def normalize_image(image: np.ndarray) -> np.ndarray:
-    
-    gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
+    """Apply CLAHE for adaptive contrast enhancement."""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     normalized = clahe.apply(gray)
-    return cv2.cvtColor(normalized,cv2.COLOR_GRAY2BGR)
+    return cv2.cvtColor(normalized, cv2.COLOR_GRAY2BGR)
 
 
-# Denoise Image using Non-Local Means Denoising
-# Denoising (reduces scan artifacts)
 def denoise_image(image: np.ndarray) -> np.ndarray:
-    return cv2.fastNlMeansDenoisingColored(image,None,h=5,hColor=5,templateWindowSize=7,searchWindowSize=21)
+    """Apply Non-Local Means denoising to reduce scan artifacts."""
+    return cv2.fastNlMeansDenoisingColored(image, None, h=5, hColor=5,
+                                            templateWindowSize=7, searchWindowSize=21)
 
 # Deskew Image using Hough Line Transform to detect skew angle and rotate accordingly.
 def deskew_image(image: np.ndarray) -> np.ndarray:
