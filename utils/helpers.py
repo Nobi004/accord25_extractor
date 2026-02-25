@@ -85,8 +85,8 @@ def draw_extraction_overlay(
     return Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
 
 
-def levenshtein_similarity(s1:str,s2: str) -> float:
-    
+def levenshtein_similarity(s1: str, s2: str) -> float:
+    """Compute normalized Levenshtein similarity between two strings."""
     if not s1 and not s2:
         return 1.0
     if not s1 or not s2:
@@ -111,33 +111,33 @@ def levenshtein_similarity(s1:str,s2: str) -> float:
     edit_distance = dp[len_s2]
     return 1.0 - edit_distance / max(len_s1, len_s2)
 
+
 def evaluate_extraction(
-    predicted: dict[str,Any],
-    ground_truth: dict[str,Any],
-    
-) -> dict[str,Any]:
+    predicted: dict[str, str],
+    ground_truth: dict[str, str],
+) -> dict[str, Any]:
+
     exact_matches = 0
     partial_matches = 0
     field_scores = {}
-    
+
     all_fields = set(list(predicted.keys()) + list(ground_truth.keys()))
-    
+
     for field in all_fields:
-        pred_val = str(predicted.get(field,"")).strip().lower()
-        
-        true_val = str(ground_truth.get(field,"")).strip().lower()
-        
-        if pred_val == true_val: 
+        pred_val = str(predicted.get(field, "")).strip().lower()
+        true_val = str(ground_truth.get(field, "")).strip().lower()
+
+        if pred_val == true_val:
             exact_matches += 1
             partial_matches += 1
             field_scores[field] = {"exact": True, "similarity": 1.0}
         else:
-            sim = levenshtein_similarity(pred_val,true_val)
-            is_partial = sim > 0.8
+            sim = levenshtein_similarity(pred_val, true_val)
+            is_partial = sim >= 0.8
             if is_partial:
-                partial_matches += 1 
-            field_scores[field] = {"exact": False, "similarity": round(sim,)}
-    
+                partial_matches += 1
+            field_scores[field] = {"exact": False, "similarity": round(sim, 3)}
+
     n = len(all_fields)
     return {
         "exact_match_accuracy": exact_matches / n if n > 0 else 0.0,
