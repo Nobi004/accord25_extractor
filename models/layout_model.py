@@ -85,83 +85,90 @@ def find_words_near_bbox(
 
 
 class LayoutParser:
-    def __init__(self,proximity_radius: int = 80):
+    """Rule-based layout parser for ACORD 25 documents."""
+
+    def __init__(self, proximity_radius: int = 80):
         self.proximity_radius = proximity_radius
-    
-    def parse(self,ocr_result: OCRResult) -> list[LayoutRegion]:
-        lines  = cluster_words_into_lines(ocr_result.words)
+
+    def parse(self, ocr_result: OCRResult) -> list[LayoutRegion]:
+        """Parse OCR result into spatial layout regions."""
+        lines = cluster_words_into_lines(ocr_result.words)
         regions: list[LayoutRegion] = []
-        
-        
-        for line in lines: 
-            if not line: 
+
+        for line in lines:
+            if not line:
                 continue
-            
-            # Each line becomes a region
+
             x = min(w.x for w in line)
             y = min(w.y for w in line)
             x_max = max(w.x + w.w for w in line)
             y_max = max(w.y + w.h for w in line)
-            
-            avg_conf = sum(w.confidence for w in line) / len(line)
-            
+            avg_conf = np.mean([w.confidence for w in line])
+
             regions.append(LayoutRegion(
-                label="Text",
+                label="TEXT",
                 words=line,
                 confidence=float(avg_conf),
-                bbox=(x,y,x_max-x,y_max-y)
+                bbox=(x, y, x_max - x, y_max - y),
             ))
-        logger.info(f"Parsed {len(regions)} layout regions from OCR result.")
+
+        logger.info(f"Layout parser identified {len(regions)} text regions.")
         return regions
-        
+
+
 class LayoutLMv3Extractor:
-    def __init__(self,model_path: str):
+    """Optional LayoutLMv3-based extractor for fine-tuned models."""
+
+    def __init__(self, model_path: str):
         try:
-            from transformers import LayoutLMv3Processor,LayoutLMv3ForTokenClassification
-            import torch 
+            from transformers import LayoutLMv3ForTokenClassification, LayoutLMv3Processor
+            import torch
+
             self.processor = LayoutLMv3Processor.from_pretrained(model_path)
             self.model = LayoutLMv3ForTokenClassification.from_pretrained(model_path)
             self.model.eval()
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model.to(self.device)
-            logger.info(f"Loaded LayoutLMv3 model from {model_path} on device {self.device}.")
+            logger.info(f"LayoutLMv3 loaded from {model_path} on {self.device}")
         except ImportError:
-            raise ImportError("transformers library is required for LayoutLMv3Extractor. Please install it via 'pip install transformers'.")
-        
-        
-    def extract(self,image,ocr_result: OCRResult) -> dict:
-        
-        import torch 
+            raise ImportError("transformers and torch required for LayoutLMv3.")
+
+    def extract(self, image, ocr_result: OCRResult) -> dict:
+        """Run LayoutLMv3 token classification to extract field-value pairs."""
+        import torch
+
         words = [w.text for w in ocr_result.words]
-        
         img_w, img_h = image.size
         boxes = [
             [
-            int(w.x / img_w *1000),
-            int(w.y / img_h *1000),
-            int((w.x + w.w) / img_w *1000),
-            int((w.y + w.h) / img_h *1000)
-            ] for w in ocr_result.words
-        ] 
-        
+                int(w.x / img_w * 1000),
+                int(w.y / img_h * 1000),
+                int((w.x + w.w) / img_w * 1000),
+                int((w.y + w.h) / img_h * 1000),
+            ]
+            for w in ocr_result.words
+        ]
+
         encoding = self.processor(
-            image,words,boxes=boxes,return_tensors="pt",truncation=True,padding="max_length"
+            image, words, boxes=boxes,
+            return_tensors="pt", truncation=True, padding="max_length"
         )
-        encoding = {k:v.to (self.device) for k,v  in encoding.items()}
-        
+        encoding = {k: v.to(self.device) for k, v in encoding.items()}
+
         with torch.no_grad():
             outputs = self.model(**encoding)
-        
+
         predictions = outputs.logits.argmax(-1).squeeze().tolist()
         id2label = self.model.config.id2label
-        
+
         extracted: dict = {}
-        for word,pred in zip(words,predictions):
-            label = id2label.get(pred,"OTHER")
+        for word, pred in zip(words, predictions):
+            label = id2label.get(pred, "OTHER")
             if label != "OTHER":
-                extracted.setdefault(label,[]).append(word)
-        return {k:" ".join(v) for k,v in extracted.items()}
-    
+                extracted.setdefault(label, []).append(word)
+
+        return {k: " ".join(v) for k, v in extracted.items()}
+
 
 def get_layout_parser(
     use_model: bool = False,
