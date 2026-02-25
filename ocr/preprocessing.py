@@ -31,85 +31,87 @@ def denoise_image(image: np.ndarray) -> np.ndarray:
     return cv2.fastNlMeansDenoisingColored(image, None, h=5, hColor=5,
                                             templateWindowSize=7, searchWindowSize=21)
 
-# Deskew Image using Hough Line Transform to detect skew angle and rotate accordingly.
 def deskew_image(image: np.ndarray) -> np.ndarray:
-    
-    #Grayscale conversion
-    gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    #Edge detection using Canny
-    edges = cv2.Canny(gray,50,150,apertureSize=3)
-    # Probabilistic Hough Line Transform to detect lines
-    lines = cv2.HoughLinesP(edges,1,np.pi/180,threshold=100,minLineLength=100,maxLineGap=10 )
-    
-    if lines is None: 
-        logger.debug("No lines detected for deskwewing.")
-        return image 
-    
+    """Detect and correct document skew using Hough lines (up to ±15 degrees)."""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100,
+                             minLineLength=100, maxLineGap=10)
+    if lines is None:
+        logger.debug("No lines detected for deskew")
+        return image
+
     angles = []
     for line in lines:
-        x1,y1,x2,y2 = line[0]
+        x1, y1, x2, y2 = line[0]
         if x2 - x1 != 0:
             angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
-            # only consider near-horizontal lines for deskewing
             if -15 < angle < 15:
                 angles.append(angle)
-                
+
     if not angles:
-        return image 
-    
+        return image
+
     median_angle = np.median(angles)
     if abs(median_angle) < 0.5:
         return image
-    
-    logger.info(f"Deskewing image by {median_angle:.2f} degrees.")
-    (h,w) = image.shape[:2]
-    center = (w//2,h//2)
-    rotation_matrix = cv2.getRotationMatrix2D(center,median_angle,1.0)
-    deskewed = cv2.warpAffine(image,rotation_matrix,w,h,flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_REPLICATE)
-    
+
+    logger.info(f"Deskewing by {median_angle:.2f} degrees")
+    h, w = image.shape[:2]
+    center = (w // 2, h // 2)
+    rotation_matrix = cv2.getRotationMatrix2D(center, median_angle, 1.0)
+    deskewed = cv2.warpAffine(image, rotation_matrix, (w, h),
+                               flags=cv2.INTER_CUBIC,
+                               borderMode=cv2.BORDER_REPLICATE)
     return deskewed
 
-# Adaptive thresholding to enhance text visibility, especially in low-contrast areas.
+
 def adaptive_threshold(image: np.ndarray) -> np.ndarray:
-    gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    binary = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,blockSize=21,C=10)
-    
-    return cv2.cvtColor(binary,cv2.COLOR_GRAY2BGR)
+    """Apply adaptive thresholding for binarization with uneven lighting."""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    binary = cv2.adaptiveThreshold(
+        gray, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        blockSize=21,
+        C=10
+    )
+    return cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
 
 
-# Contrast enhancement using PIL's ImageEnhance to improve text visibility.
-def enhance_contrast(pil_image: Image.Image ,factor:float=1.5) -> Image.Image:
-    
+def enhance_contrast(pil_image: Image.Image, factor: float = 1.5) -> Image.Image:
+    """Enhance image contrast using PIL for better OCR performance."""
     enhancer = ImageEnhance.Contrast(pil_image)
     return enhancer.enhance(factor)
 
 
-# Main preprocessing function that applies all steps in sequence.
-def preprocess_image(pil_image: Image.Image,
-                     denoise: bool = True,
-                     deskew: bool = True,
-                     normalize: bool = True,
-                     contrast_enhance: bool = True,
-                     adaptive_thresh: bool = True) -> Image.Image:
-    logger.info("Starting image preprocessing pipeline.")
+def preprocess_image(
+    pil_image: Image.Image,
+    denoise: bool = True,
+    deskew: bool = True,
+    adaptive_thresh: bool = True,
+    contrast_enhance: bool = True,
+) -> Image.Image:
+    """Full preprocessing pipeline: contrast, normalize, denoise, deskew, threshold."""
+    logger.info("Starting image preprocessing")
+
     if contrast_enhance:
         pil_image = enhance_contrast(pil_image)
-    
+
     cv_image = pil_to_cv2(pil_image)
-    if normalize:
-        cv_image = normalize_image(cv_image)
-    
+    cv_image = normalize_image(cv_image)
+
     if denoise:
         cv_image = denoise_image(cv_image)
-    
+
     if deskew:
         cv_image = deskew_image(cv_image)
-        
+
     if adaptive_thresh:
         cv_image = adaptive_threshold(cv_image)
-    
+
     result = cv2_to_pil(cv_image)
-    logger.info("Completed image preprocessing.")
+    logger.info("Preprocessing complete.")
     return result
 
 def load_image_from_path(path:str) -> Image.Image:
