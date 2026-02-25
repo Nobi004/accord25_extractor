@@ -30,41 +30,51 @@ def setup_logging(level: str = LOG_LEVEL, log_file: str = None) -> logging.Logge
 
     return root_logger
 
-def save_json_output(data: dict[str,Any], output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True,exist_ok=True)
-    with open(output_path,"w",encoding="utf-8") as f:
-        json.dump(data,f,indent=2,ensure_ascii=False)
+def save_json_output(data: dict[str, Any], output_path: Path) -> None:
+    """Save extraction results to JSON file."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
     logging.getLogger(__name__).info(f"Output saved to {output_path}")
-    
-def load_json(path: Path) -> dict[str,Any]:
-    with open(path,"r",encoding="utf-8") as f:
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    """Load JSON from file."""
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-    
-def pdf_to_images(pdf_path: str) -> list[str]:
-    
+
+
+def pdf_to_images(pdf_path: str) -> list:
+    """Convert PDF pages to PIL Images using pdf2image."""
     try:
         from pdf2image import convert_from_path
-        images= convert_from_path(pdf_path,dpi=300)
-        logging.getLoader(__name__).info(f"Converted PDF to {len(images)} images.")
+        images = convert_from_path(pdf_path, dpi=300)
+        logging.getLogger(__name__).info(f"Converted PDF to {len(images)} page(s)")
         return images
     except ImportError:
-        raise ImportError("pdf2image library is required for PDF processing. Please install it via 'pip install pdf2image'.")
-    
+        raise ImportError("pdf2image not installed. Run: pip install pdf2image")
+    except Exception as e:
+        raise RuntimeError(f"PDF conversion failed: {e}")
 
-def draw_extraction_overlay(image,field_matches: dict,
-                            color: tuple=(0,255,0),
-                            thickness: int=2):
+
+def draw_extraction_overlay(
+    image,
+    field_matches: dict,
+    color: tuple = (0, 255, 0),
+    thickness: int = 2,
+):
+    """Draw bounding box overlays on image for extracted fields."""
     import cv2
     import numpy as np
     from PIL import Image
-    
-    cv_img = cv2.cvtColor(np.array(image),cv2.COLOR_RGB2BGR)
-    
-    for field_name,match in field_matches.items():
+
+    cv_img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+    for field_name, match in field_matches.items():
         if match.bbox is None:
             continue
-        x,y,w,h = match.bbox
-        cv2.rectangle(cv_img,(x,y),(x+w,y+h),color,thickness)
+        x, y, w, h = match.bbox
+        cv2.rectangle(cv_img, (x, y), (x + w, y + h), color, thickness)
         # Add field label above box
         cv2.putText(
             cv_img, field_name.replace("_", " ").title(),
