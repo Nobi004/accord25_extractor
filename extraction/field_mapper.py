@@ -265,8 +265,7 @@ class FieldMapper:
                     continue
                 
             # Step 4: Fallback - regex search on full text 
-            fallback = self._regex_fallback(full_text,
-                                            field_name)
+            fallback = self._regex_fallback(field_name, full_text)
             if fallback:
                 results[field_name] = FieldMatch(
                     field_name=field_name,
@@ -277,32 +276,6 @@ class FieldMapper:
         logger.info(f"Extracted {len(results)}/{len(FIELD_KEYWORDS)} fields.")
         return results
     
-    def _postprocess_value(self, field_name: str, value: str) -> str:
-        """Apply field-specific cleaning and normalization."""
-        value = value.strip()
-
-        # Remove common OCR artifacts
-        value = re.sub(r"[|\\/]{2,}", "", value)
-        value = re.sub(r"\s+", " ", value)
-
-        # Field-specific normalization
-        if "date" in field_name:
-            date = extract_date(value)
-            if date:
-                return date
-
-        if field_name == "policy_number":
-            pol = extract_policy_number(value)
-            if pol:
-                return pol
-
-        if "limit" in field_name:
-            currency = extract_currency(value)
-            if currency:
-                return currency
-
-        return value
-
     def _regex_fallback(self, field_name: str, full_text: str) -> Optional[str]:
         """
         Last-resort regex extraction directly on full document text.
